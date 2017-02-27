@@ -11,6 +11,7 @@
 
     <modules>
         <module>hello-word-count</module>
+        <module>hello-word-count-network</module>
     </modules>
 
     <properties>
