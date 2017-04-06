@@ -3,9 +3,6 @@ package shuaicj.hello.spark.word.count;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.Function2;
-import org.apache.spark.api.java.function.PairFunction;
 import scala.Tuple2;
 
 import java.util.Arrays;
@@ -28,9 +25,9 @@ public class WordCountApp {
         JavaSparkContext sc = new JavaSparkContext(conf);
 
         JavaRDD<String> lines = sc.textFile(path);
-        JavaRDD<String> words = lines.flatMap((FlatMapFunction<String, String>) line -> Arrays.asList(line.split(" ")).iterator());
-        Map<String, Integer> counts = words.mapToPair((PairFunction<String, String, Integer>) word -> new Tuple2<>(word, 1))
-                .reduceByKey((Function2<Integer, Integer, Integer>) (count1, count2) -> count1 + count2)
+        JavaRDD<String> words = lines.flatMap(line -> Arrays.asList(line.split(" ")).iterator());
+        Map<String, Integer> counts = words.mapToPair(word -> new Tuple2<>(word, 1))
+                .reduceByKey((count1, count2) -> count1 + count2)
                 .collectAsMap();
 
         StringBuilder sb = new StringBuilder();
