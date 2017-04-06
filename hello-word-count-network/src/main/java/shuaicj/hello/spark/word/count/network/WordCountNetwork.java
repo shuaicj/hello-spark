@@ -24,7 +24,7 @@ public class WordCountNetwork {
 
         String host = args[0];
         int port = Integer.parseInt(args[1]);
-        SparkConf conf = new SparkConf().setAppName("WordCountNetwork");
+        SparkConf conf = new SparkConf().setAppName(WordCountNetwork.class.getSimpleName());
         JavaStreamingContext ssc = new JavaStreamingContext(conf, Durations.seconds(10));
 
         JavaReceiverInputDStream<String> lines = ssc.socketTextStream(host, port);

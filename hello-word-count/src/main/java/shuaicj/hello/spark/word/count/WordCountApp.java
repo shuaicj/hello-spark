@@ -21,7 +21,7 @@ public class WordCountApp {
         }
 
         String path = args[0];
-        SparkConf conf = new SparkConf().setAppName("WordCountApp");
+        SparkConf conf = new SparkConf().setAppName(WordCountApp.class.getSimpleName());
         JavaSparkContext sc = new JavaSparkContext(conf);
 
         JavaRDD<String> lines = sc.textFile(path);

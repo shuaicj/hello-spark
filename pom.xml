@@ -12,6 +12,7 @@
     <modules>
         <module>hello-word-count</module>
         <module>hello-word-count-network</module>
+        <module>hello-parallelize</module>
     </modules>
 
     <properties>
