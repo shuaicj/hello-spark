@@ -14,6 +14,7 @@
         <module>hello-word-count-network</module>
         <module>hello-parallelize</module>
         <module>hello-multi-thread</module>
+        <module>hello-rw-consistency</module>
     </modules>
 
     <properties>
