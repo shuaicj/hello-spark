@@ -34,13 +34,7 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
-                    <finalName>${project.artifactId}-${project.version}</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
-                    <archive>
-                        <manifest>
-                            <mainClass>shuaicj.hello.spark.rw.consistency.ReadWriteConsistencyLocal</mainClass>
-                        </manifest>
-                    </archive>
                 </configuration>
                 <executions>
                     <execution>
@@ -53,7 +47,5 @@
                 </executions>
             </plugin>
         </plugins>
-
-        <finalName>${project.artifactId}-${project.version}</finalName>
     </build>
 </project>
