@@ -13,16 +13,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_${scala.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
+            <groupId>shuaicj.hello.spark</groupId>
+            <artifactId>hello-rw-consistency-common</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

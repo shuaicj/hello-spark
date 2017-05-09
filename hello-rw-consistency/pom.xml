@@ -13,7 +13,23 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>hello-rw-consistency-common</module>
         <module>hello-rw-consistency-local</module>
+        <module>hello-rw-consistency-hdfs</module>
     </modules>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.version}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+    </dependencies>
 </project>
