@@ -5,4 +5,6 @@ Hello Spark!
 - **hello-parallelize** - usage of `SparkContext.parallelize()`
 - **hello-multi-thread** - submit tasks in multi threads
 - **hello-rw-consistency** - test read write consistency on different distributed file systems
+    - **hello-rw-concistency-common** - common interface and process
     - **hello-rw-concistency-local** - `Ceph` mount as local path on each spark slave
+    - **hello-rw-concistency-hdfs** - `Apache Hdfs` as storage
