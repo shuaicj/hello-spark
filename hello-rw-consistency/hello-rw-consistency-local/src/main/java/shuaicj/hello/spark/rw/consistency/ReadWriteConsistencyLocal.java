@@ -1,8 +1,8 @@
 package shuaicj.hello.spark.rw.consistency;
 
 /**
- * Verify r/w consistency on Ceph local storage.
- * The distributed file system - Ceph, is mount as a local path on each spark slave.
+ * Verify r/w consistency on local path.
+ * Mount Ceph or Samba as a local path on each spark slave.
  *
  * @author shuaicj 2017/05/09
  */
