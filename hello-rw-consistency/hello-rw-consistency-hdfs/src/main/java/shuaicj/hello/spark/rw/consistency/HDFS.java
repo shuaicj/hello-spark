@@ -1,8 +1,10 @@
 package shuaicj.hello.spark.rw.consistency;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,16 +18,20 @@ import java.io.OutputStream;
 public class HDFS implements FS {
 
     @Override
-    public InputStream inputStream(String path) throws IOException {
+    public byte[] read(String path) throws IOException {
         Path p = new Path(path);
-        return p.getFileSystem(new Configuration()).open(p);
+        try (InputStream in = p.getFileSystem(new Configuration()).open(p)) {
+            return IOUtils.toByteArray(in);
+        }
     }
 
     @Override
-    public OutputStream outputStream(String path) throws IOException {
+    public void write(String path, byte[] bytes) throws IOException {
         Path p = new Path(path);
-        return p.getFileSystem(new Configuration()).create(p);
-   }
+        try (OutputStream out = new BufferedOutputStream(p.getFileSystem(new Configuration()).create(p))) {
+            out.write(bytes);
+        }
+    }
 
     @Override
     public boolean exists(String path) throws IOException {
