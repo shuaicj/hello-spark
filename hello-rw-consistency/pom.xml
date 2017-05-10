@@ -16,7 +16,18 @@
         <module>hello-rw-consistency-common</module>
         <module>hello-rw-consistency-local</module>
         <module>hello-rw-consistency-hdfs</module>
+        <module>hello-rw-consistency-s3</module>
     </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>shuaicj.hello.spark</groupId>
+                <artifactId>hello-rw-consistency-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
