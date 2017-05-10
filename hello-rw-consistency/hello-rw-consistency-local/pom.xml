@@ -15,7 +15,6 @@
         <dependency>
             <groupId>shuaicj.hello.spark</groupId>
             <artifactId>hello-rw-consistency-common</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

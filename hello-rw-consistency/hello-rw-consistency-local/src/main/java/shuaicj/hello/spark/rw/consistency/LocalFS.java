@@ -1,5 +1,8 @@
 package shuaicj.hello.spark.rw.consistency;
 
+import org.apache.commons.io.IOUtils;
+
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -16,13 +19,17 @@ import java.io.OutputStream;
 public class LocalFS implements FS {
 
     @Override
-    public InputStream inputStream(String path) throws IOException {
-        return new FileInputStream(path);
+    public byte[] read(String path) throws IOException {
+        try (InputStream in = new FileInputStream(path)) {
+            return IOUtils.toByteArray(in);
+        }
     }
 
     @Override
-    public OutputStream outputStream(String path) throws IOException {
-        return new FileOutputStream(path);
+    public void write(String path, byte[] bytes) throws IOException {
+        try (OutputStream out = new BufferedOutputStream(new FileOutputStream(path))) {
+            out.write(bytes);
+        }
     }
 
     @Override
