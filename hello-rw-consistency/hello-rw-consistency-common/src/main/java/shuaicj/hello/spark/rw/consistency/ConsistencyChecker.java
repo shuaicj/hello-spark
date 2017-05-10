@@ -4,8 +4,6 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.springframework.util.DigestUtils;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,17 +28,11 @@ public class ConsistencyChecker implements Serializable {
 
     private volatile boolean stop;
 
-    public ConsistencyChecker(String[] args, FS fs) {
-        if (args.length != 6
-                || !args[0].equals("--dir")
-                || !args[2].equals("--num") || Integer.parseInt(args[3]) <= 0
-                || !args[4].equals("--size") || Integer.parseInt(args[5]) <= 0) {
-            throw new IllegalArgumentException("dir, num and size required");
-        }
+    public ConsistencyChecker(FS fs, String dir, int num, int size) {
         this.fs = fs;
-        this.dir = args[1];
-        this.num = Integer.parseInt(args[3]);
-        this.size = Integer.parseInt(args[5]);
+        this.dir = dir;
+        this.num = num;
+        this.size = size;
     }
 
     public void check() {
@@ -111,20 +103,14 @@ public class ConsistencyChecker implements Serializable {
      * @return file info of two
      */
     private Iterator<FileInfo> write(String prefix, int size) {
+        byte[] buf = new byte[size];
         Random r = new Random();
-        byte[] buf = new byte[1024];
+        r.nextBytes(buf);
         String file0 = prefix + "-0";
         String file1 = prefix + "-1";
-        try (OutputStream out0 = fs.outputStream(file0)) {
-            try (OutputStream out1 = fs.outputStream(file1)) {
-                for (int count = size; count > 0; count -= buf.length) {
-                    r.nextBytes(buf);
-                    out0.write(buf, 0, count < buf.length ? count : buf.length);
-                    out1.write(buf, 0, count < buf.length ? count : buf.length);
-                }
-                out0.flush();
-                out1.flush();
-            }
+        try {
+            fs.write(file0, buf);
+            fs.write(file1, buf);
         } catch (IOException e) {
             return Arrays.asList(new FileInfo(e.toString(), file0, ""), new FileInfo(e.toString(), file1, "")).iterator();
         }
@@ -158,8 +144,8 @@ public class ConsistencyChecker implements Serializable {
     }
 
     private String md5(String file) {
-        try (InputStream in = fs.inputStream(file)) {
-            return DigestUtils.md5DigestAsHex(in);
+        try {
+            return DigestUtils.md5DigestAsHex(fs.read(file));
         } catch (Exception e) {
             return e.toString();
         }

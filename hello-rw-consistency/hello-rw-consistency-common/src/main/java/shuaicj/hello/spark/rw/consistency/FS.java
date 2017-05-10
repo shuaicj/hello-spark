@@ -1,8 +1,6 @@
 package shuaicj.hello.spark.rw.consistency;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Serializable;
 
 /**
@@ -12,9 +10,9 @@ import java.io.Serializable;
  */
 public interface FS extends Serializable {
 
-    InputStream inputStream(String path) throws IOException;
+    byte[] read(String path) throws IOException;
 
-    OutputStream outputStream(String path) throws IOException;
+    void write(String path, byte[] bytes) throws IOException;
 
     boolean exists(String path) throws IOException;
 
