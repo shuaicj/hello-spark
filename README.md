@@ -9,3 +9,4 @@ Hello Spark!
     - **hello-rw-concistency-local** - test any file system which is capable of being mounted as a local path on each spark slave, like `Ceph` or `Samba`
     - **hello-rw-concistency-hdfs** - test `Apache HDFS`
     - **hello-rw-concistency-s3** - test any file system which is compatible with `S3 API`, like `AWS` or `Ceph`
+    - **hello-rw-concistency-utils** - useful helper
