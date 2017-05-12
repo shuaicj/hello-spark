@@ -9,12 +9,15 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.ListVersionsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.S3VersionSummary;
+import com.amazonaws.services.s3.model.VersionListing;
 import com.amazonaws.util.StringUtils;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Useful helper.
@@ -27,12 +30,18 @@ public class Utils {
         try {
             if (match(args, "--version")) {
                 System.out.println("1.0.0");
-            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --l")) {
-                S3.conn(args[3], args[5], args[7]).list();
-            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --lb")) {
-                S3.conn(args[3], args[5], args[7]).listBuckets();
-            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --lo *")) {
-                S3.conn(args[3], args[5], args[7]).listObjects(args[9]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --create *")) {
+                S3.conn(args[3], args[5], args[7]).createBucket(args[9]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --ls")) {
+                S3.conn(args[3], args[5], args[7]).ls();
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --ls *")) {
+                S3.conn(args[3], args[5], args[7]).lsBucket(args[9]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --ls * *")) {
+                S3.conn(args[3], args[5], args[7]).lsObject(args[9], args[10]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --rm *")) {
+                S3.conn(args[3], args[5], args[7]).rmBucket(args[9]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --rm * *")) {
+                S3.conn(args[3], args[5], args[7]).rmObject(args[9], args[10]);
             } else {
                 throw new IllegalArgumentException("args illegal");
             }
@@ -70,14 +79,11 @@ public class Utils {
                     .build());
         }
 
-        public void list() {
-            List<String> buckets = listBuckets();
-            for (String b : buckets) {
-                listObjects(b);
-            }
+        public void createBucket(String bucket) {
+            conn.createBucket(bucket);
         }
 
-        public List<String> listBuckets() {
+        public void ls() {
             System.out.println("buckets {");
             List<Bucket> buckets = conn.listBuckets();
             for (Bucket bucket : buckets) {
@@ -85,10 +91,9 @@ public class Utils {
                         StringUtils.fromDate(bucket.getCreationDate()));
             }
             System.out.println("}");
-            return buckets.stream().map(Bucket::getName).collect(Collectors.toList());
         }
 
-        public void listObjects(String bucket) {
+        public void lsBucket(String bucket) {
             System.out.println(bucket + " objects {");
             ObjectListing objects = conn.listObjects(bucket);
             do {
@@ -100,6 +105,35 @@ public class Utils {
                 objects = conn.listNextBatchOfObjects(objects);
             } while (objects.isTruncated());
             System.out.println("}");
+        }
+
+        public void lsObject(String bucket, String object) {
+            ObjectMetadata meta = conn.getObjectMetadata(bucket, object);
+            System.out.println(object + "\t" + meta.getContentLength() + "\t" +
+                    StringUtils.fromDate(meta.getLastModified()));
+        }
+
+        public void rmBucket(String bucket) throws InterruptedException {
+            ObjectListing objects = conn.listObjects(bucket);
+            do {
+                for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
+                    conn.deleteObject(bucket, objectSummary.getKey());
+                }
+                objects = conn.listNextBatchOfObjects(objects);
+            } while (objects.isTruncated());
+
+            VersionListing versions = conn.listVersions(new ListVersionsRequest().withBucketName(bucket));
+            do {
+                for (S3VersionSummary versionSummary : versions.getVersionSummaries()) {
+                    conn.deleteVersion(bucket, versionSummary.getKey(), versionSummary.getVersionId());
+                }
+                versions = conn.listNextBatchOfVersions(versions);
+            } while (versions.isTruncated());
+            conn.deleteBucket(bucket);
+        }
+
+        public void rmObject(String bucket, String object) {
+            conn.deleteObject(bucket, object);
         }
     }
 }
