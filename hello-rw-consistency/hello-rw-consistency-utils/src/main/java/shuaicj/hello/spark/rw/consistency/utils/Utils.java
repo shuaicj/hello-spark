@@ -9,6 +9,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -17,6 +18,7 @@ import com.amazonaws.services.s3.model.S3VersionSummary;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.amazonaws.util.StringUtils;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -42,6 +44,10 @@ public class Utils {
                 S3.conn(args[3], args[5], args[7]).rmBucket(args[9]);
             } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --rm * *")) {
                 S3.conn(args[3], args[5], args[7]).rmObject(args[9], args[10]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --get * * *")) {
+                S3.conn(args[3], args[5], args[7]).getObject(args[9], args[10], args[11]);
+            } else if (match(args, "--type s3 --access-key * --secret-key * --endpoint * --put * * *")) {
+                S3.conn(args[3], args[5], args[7]).putObject(args[9], args[10], args[11]);
             } else {
                 throw new IllegalArgumentException("args illegal");
             }
@@ -99,7 +105,7 @@ public class Utils {
             do {
                 for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
                     System.out.println(objectSummary.getKey() + "\t" +
-                            objectSummary.getSize() + "\t" +
+                            objectSummary.getSize() + "\t" + objectSummary.getETag() + "\t" +
                             StringUtils.fromDate(objectSummary.getLastModified()));
                 }
                 objects = conn.listNextBatchOfObjects(objects);
@@ -109,7 +115,7 @@ public class Utils {
 
         public void lsObject(String bucket, String object) {
             ObjectMetadata meta = conn.getObjectMetadata(bucket, object);
-            System.out.println(object + "\t" + meta.getContentLength() + "\t" +
+            System.out.println(object + "\t" + meta.getContentLength() + "\t" + meta.getETag() + "\t" +
                     StringUtils.fromDate(meta.getLastModified()));
         }
 
@@ -134,6 +140,14 @@ public class Utils {
 
         public void rmObject(String bucket, String object) {
             conn.deleteObject(bucket, object);
+        }
+
+        public void getObject(String bucket, String object, String local) {
+            conn.getObject(new GetObjectRequest(bucket, object), new File(local));
+        }
+
+        public void putObject(String bucket, String object, String local) {
+            conn.putObject(bucket, object, new File(local));
         }
     }
 }
