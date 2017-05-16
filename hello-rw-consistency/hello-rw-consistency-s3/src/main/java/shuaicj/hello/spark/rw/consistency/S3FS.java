@@ -2,12 +2,10 @@ package shuaicj.hello.spark.rw.consistency;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import lombok.Getter;
@@ -101,11 +99,15 @@ public class S3FS implements FS {
     }
 
     private AmazonS3 conn() {
-        return AmazonS3ClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)))
-                .withClientConfiguration(new ClientConfiguration().withProtocol(Protocol.HTTP))
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, Regions.DEFAULT_REGION.getName()))
-                .build();
+        AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+
+        ClientConfiguration clientConfig = new ClientConfiguration();
+        clientConfig.setProtocol(Protocol.HTTP);
+
+        AmazonS3 conn = new AmazonS3Client(credentials, clientConfig);
+        conn.setEndpoint(endpoint);
+
+        return conn;
     }
 
     private boolean createBucket(AmazonS3 conn, String bucket) {

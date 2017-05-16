@@ -2,12 +2,10 @@ package shuaicj.hello.spark.rw.consistency.utils;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
@@ -78,11 +76,15 @@ public class Utils {
         }
 
         public static S3 conn(String accessKey, String secretKey, String endpoint) {
-            return new S3(AmazonS3ClientBuilder.standard()
-                    .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)))
-                    .withClientConfiguration(new ClientConfiguration().withProtocol(Protocol.HTTP))
-                    .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, Regions.DEFAULT_REGION.getName()))
-                    .build());
+            AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+
+            ClientConfiguration clientConfig = new ClientConfiguration();
+            clientConfig.setProtocol(Protocol.HTTP);
+
+            AmazonS3 conn = new AmazonS3Client(credentials, clientConfig);
+            conn.setEndpoint(endpoint);
+
+            return new S3(conn);
         }
 
         public void createBucket(String bucket) {
@@ -102,15 +104,22 @@ public class Utils {
         public void lsBucket(String bucket) {
             System.out.println(bucket + " objects {");
             ObjectListing objects = conn.listObjects(bucket);
-            do {
+            long count = 0;
+            while (true) {
                 for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
+                    count++;
                     System.out.println(objectSummary.getKey() + "\t" +
                             objectSummary.getSize() + "\t" + objectSummary.getETag() + "\t" +
                             StringUtils.fromDate(objectSummary.getLastModified()));
                 }
-                objects = conn.listNextBatchOfObjects(objects);
-            } while (objects.isTruncated());
+                if (objects.isTruncated()) {
+                    objects = conn.listNextBatchOfObjects(objects);
+                } else {
+                    break;
+                }
+            }
             System.out.println("}");
+            System.out.println("object count: " + count);
         }
 
         public void lsObject(String bucket, String object) {
@@ -121,20 +130,28 @@ public class Utils {
 
         public void rmBucket(String bucket) throws InterruptedException {
             ObjectListing objects = conn.listObjects(bucket);
-            do {
+            while (true) {
                 for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
                     conn.deleteObject(bucket, objectSummary.getKey());
                 }
-                objects = conn.listNextBatchOfObjects(objects);
-            } while (objects.isTruncated());
+                if (objects.isTruncated()) {
+                    objects = conn.listNextBatchOfObjects(objects);
+                } else {
+                    break;
+                }
+            }
 
             VersionListing versions = conn.listVersions(new ListVersionsRequest().withBucketName(bucket));
-            do {
+            while (true) {
                 for (S3VersionSummary versionSummary : versions.getVersionSummaries()) {
                     conn.deleteVersion(bucket, versionSummary.getKey(), versionSummary.getVersionId());
                 }
-                versions = conn.listNextBatchOfVersions(versions);
-            } while (versions.isTruncated());
+                if (versions.isTruncated()) {
+                    versions = conn.listNextBatchOfVersions(versions);
+                } else {
+                    break;
+                }
+            }
             conn.deleteBucket(bucket);
         }
 
