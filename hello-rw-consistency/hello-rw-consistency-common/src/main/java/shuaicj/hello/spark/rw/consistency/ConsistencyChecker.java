@@ -1,17 +1,19 @@
 package shuaicj.hello.spark.rw.consistency;
 
 import org.apache.spark.api.java.JavaSparkContext;
-import org.springframework.util.DigestUtils;
 
+import javax.xml.bind.DatatypeConverter;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * Check read/write consistency.
@@ -45,53 +47,29 @@ public class ConsistencyChecker implements Serializable {
             list.add(i);
         }
 
+        final long timestamp = System.currentTimeMillis();
+
+        // create files
+        List<List<FileInfo>> result = sc.parallelize(list, list.size())
+                .map(i -> create(dir + "/" + timestamp + "-" + i))
+                .collect();
+        if (!result.stream().allMatch(
+                infos -> infos.stream().allMatch(
+                        info -> info.getStatus().equals("ok")))) {
+            System.out.println(timestamp + " create: " + prettyList(result));
+            return;
+        }
+
+        // read or write randomly
         while (!stop) {
-            final long timestamp = System.currentTimeMillis();
-
-            // write files
-            List<FileInfo> writeResult = sc.parallelize(list, list.size())
-                    .flatMap(i -> write(dir + "/" + timestamp + "-" + i, size))
+            result = sc.parallelize(result, result.size())
+                    .map(infos -> Math.random() < 0.5 ? read(infos) : write(infos))
                     .collect();
-            if (!writeResult.stream().allMatch(info -> info.getStatus().equals("ok"))) {
-                System.out.println(timestamp + " write: " + writeResult);
-                break;
-            }
-
-            // read for three times
-            boolean readFailed = false;
-            List<Map<String, Long>> readResults = new ArrayList<>();
-            for (int i = 0; i < 3; i++) {
-                Map<String, Long> readResult = sc.parallelize(writeResult, writeResult.size())
-                        .map(this::read)
-                        .countByValue();
-                if (!readResult.containsKey("ok") || readResult.get("ok") != writeResult.size()) {
-                    readFailed = true;
-                }
-                readResults.add(readResult);
-            }
-            if (readFailed) {
-                for (Map<String, Long> readResult : readResults) {
-                    System.out.println(timestamp + " read:\n" + prettyMap(readResult));
-                }
-                break;
-            }
-
-            // delete files
-            Map<String, Long> deleteResult = sc.parallelize(writeResult, writeResult.size())
-                    .map(this::delete)
-                    .countByValue();
-            if (!deleteResult.containsKey("ok") || deleteResult.get("ok") != writeResult.size()) {
-                System.out.println(timestamp + " delete: " + deleteResult);
-                break;
-            }
-
-            // check existence
-            Map<String, Long> existResult = sc.parallelize(writeResult, writeResult.size())
-                    .map(this::exists)
-                    .countByValue();
-            if (existResult.containsKey("ok")) {
-                System.out.println(timestamp + " exists: " + existResult);
-                break;
+            if (!result.stream().allMatch(
+                    infos -> infos.stream().allMatch(
+                            info -> info.getStatus().equals("ok")))) {
+                System.out.println(timestamp + " rw: " + prettyList(result));
+                return;
             }
         }
     }
@@ -99,61 +77,111 @@ public class ConsistencyChecker implements Serializable {
     /**
      * Write two files with the same content for comparison.
      * @param prefix two files will be named as ${prefix}-0 and ${prefix}-1
-     * @param size file size
      * @return file info of two
      */
-    private Iterator<FileInfo> write(String prefix, int size) {
+    private List<FileInfo> create(String prefix) {
+        return write(Arrays.asList(
+                new FileInfo(prefix + "-0", size),
+                new FileInfo(prefix + "-1", size)
+        ));
+    }
+
+    private List<FileInfo> write(List<FileInfo> infos) {
+        List<FileInfo> rt = new ArrayList<>(infos.size());
         byte[] buf = new byte[size];
         Random r = new Random();
         r.nextBytes(buf);
-        String file0 = prefix + "-0";
-        String file1 = prefix + "-1";
+        for (FileInfo info : infos) {
+            try {
+                fs.write(info.getFile(), buf);
+                rt.add(new FileInfo(info.getFile(), info.getSize(), md5(info.getFile()), "ok"));
+            } catch (IOException e) {
+                rt.add(new FileInfo(info.getFile(), info.getSize(), "no md5", e.toString()));
+            }
+        }
+        String md5 = rt.get(0).getMd5();
+        if (rt.stream().allMatch(info -> info.getStatus().equals("ok") && info.getMd5().equals(md5))) {
+            return rt;
+        }
+        return rt.stream()
+                .map(info -> new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "not same"))
+                .collect(Collectors.toList());
+    }
+
+    private FileInfo write(FileInfo info) {
+        byte[] buf = new byte[size];
+        Random r = new Random();
+        r.nextBytes(buf);
         try {
-            fs.write(file0, buf);
-            fs.write(file1, buf);
+            fs.write(info.getFile(), buf);
+            return new FileInfo(info.getFile(), info.getSize(), md5(info.getFile()), "ok");
         } catch (IOException e) {
-            return Arrays.asList(new FileInfo(e.toString(), file0, ""), new FileInfo(e.toString(), file1, "")).iterator();
+            return new FileInfo(info.getFile(), info.getSize(), "no md5", e.toString());
         }
-
-        String md50 = md5(file0);
-        String md51 = md5(file1);
-        String status = md50.equals(md51) ? "ok" : "copy not same";
-        return Arrays.asList(new FileInfo(status, file0, md50), new FileInfo(status, file1, md51)).iterator();
     }
 
-    private String read(FileInfo info) {
-        String actual = md5(info.getFile());
-        return info.getMd5().equals(actual) ? "ok" :
-                "file:" + info.getFile() + " expect:" + info.getMd5() + " actual:" + actual;
+    private List<FileInfo> read(List<FileInfo> infos) {
+        return infos.stream().map(this::read).collect(Collectors.toList());
     }
 
-    private String delete(FileInfo info) {
+    private FileInfo read(FileInfo info) {
         try {
-            return fs.delete(info.getFile()) ? "ok" : "failed";
-        } catch (Exception e) {
-            return e.toString();
+            String actual = md5(info.getFile());
+            return info.getMd5().equals(actual) ?
+                    new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "ok") :
+                    new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "actual:" + actual);
+        } catch (IOException e) {
+            return new FileInfo(info.getFile(), info.getSize(), info.getMd5(), e.toString());
         }
     }
 
-    private String exists(FileInfo info) {
-        try {
-            return fs.exists(info.getFile()) ? "ok" : "failed";
-        } catch (Exception e) {
-            return e.toString();
+    // private String delete(FileInfo info) {
+    //     try {
+    //         return fs.delete(info.getFile()) ? "ok" : "failed";
+    //     } catch (Exception e) {
+    //         return e.toString();
+    //     }
+    // }
+    //
+    // private String exists(FileInfo info) {
+    //     try {
+    //         return fs.exists(info.getFile()) ? "ok" : "failed";
+    //     } catch (Exception e) {
+    //         return e.toString();
+    //     }
+    // }
+
+    private String md5(String file) throws IOException {
+        // return DigestUtils.md5DigestAsHex(fs.read(file));
+        try (InputStream in = new FileInputStream(file)) {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] buf = new byte[4096];
+            for (int len = in.read(buf); len != -1; len = in.read(buf)) {
+                md.update(buf, 0, len);
+                Thread.sleep(100);
+            }
+            return DatatypeConverter.printHexBinary(md.digest());
+        } catch (InterruptedException | NoSuchAlgorithmException e) {
+            throw new IOException(e);
         }
     }
 
-    private String md5(String file) {
-        try {
-            return DigestUtils.md5DigestAsHex(fs.read(file));
-        } catch (Exception e) {
-            return e.toString();
-        }
-    }
+    // private String prettyMap(Map<String, Long> map) {
+    //     StringBuilder sb = new StringBuilder();
+    //     new TreeMap<>(map).forEach((k, v) -> sb.append(k).append(" n:").append(v).append('\n'));
+    //     return sb.toString();
+    // }
 
-    private String prettyMap(Map<String, Long> map) {
+    private String prettyList(List<List<FileInfo>> result) {
         StringBuilder sb = new StringBuilder();
-        new TreeMap<>(map).forEach((k, v) -> sb.append(k).append(" n:").append(v).append('\n'));
+        sb.append('\n');
+        for (List<FileInfo> infos : result) {
+            for (FileInfo info : infos) {
+                sb.append(info.getFile()).append(' ')
+                        .append(info.getMd5()).append(' ')
+                        .append(info.getStatus()).append('\n');
+            }
+        }
         return sb.toString();
     }
 }
