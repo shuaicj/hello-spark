@@ -42,10 +42,7 @@ public class ConsistencyChecker implements Serializable {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> stop = true));
 
         final JavaSparkContext sc = new JavaSparkContext();
-        final List<Integer> list = new ArrayList<>(num);
-        for (int i = 0; i < num; i++) {
-            list.add(i);
-        }
+        final List<String> list = list(num);
 
         final long timestamp = System.currentTimeMillis();
 
@@ -62,16 +59,32 @@ public class ConsistencyChecker implements Serializable {
 
         // read or write randomly
         while (!stop) {
+            final boolean rw = Math.random() < 0.5;
             result = sc.parallelize(result, result.size())
-                    .map(infos -> Math.random() < 0.5 ? read(infos) : write(infos))
+                    .map(infos -> rw ? read(infos) : write(infos))
                     .collect();
             if (!result.stream().allMatch(
                     infos -> infos.stream().allMatch(
                             info -> info.getStatus().equals("ok")))) {
-                System.out.println(timestamp + " rw: " + prettyList(result));
+                System.out.println(timestamp + (rw ? " read: " : " write: ") + prettyList(result));
                 return;
             }
         }
+    }
+
+    private List<String> list(int num) {
+        List<String> list = new ArrayList<>(num);
+        int len = Integer.toString(num).length();
+        for (int i = 0; i < num; i++) {
+            StringBuilder sb = new StringBuilder();
+            String s = Integer.toString(i);
+            for (int count = len - s.length(); count > 0; count--) {
+                sb.append('0');
+            }
+            sb.append(s);
+            list.add(sb.toString());
+        }
+        return list;
     }
 
     /**
@@ -160,7 +173,7 @@ public class ConsistencyChecker implements Serializable {
                 md.update(buf, 0, len);
                 Thread.sleep(100);
             }
-            return DatatypeConverter.printHexBinary(md.digest());
+            return DatatypeConverter.printHexBinary(md.digest()).toLowerCase();
         } catch (InterruptedException | NoSuchAlgorithmException e) {
             throw new IOException(e);
         }
