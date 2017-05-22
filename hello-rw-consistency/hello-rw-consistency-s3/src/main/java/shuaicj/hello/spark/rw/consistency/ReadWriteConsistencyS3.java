@@ -1,5 +1,7 @@
 package shuaicj.hello.spark.rw.consistency;
 
+import shuaicj.hello.spark.rw.consistency.md5.StandardMD5er;
+
 /**
  * Verify r/w consistency via Amazon S3 API.
  * Support any file system which is compatible with S3 API, like AWS or Ceph.
@@ -26,7 +28,8 @@ public class ReadWriteConsistencyS3 {
         final String endpoint = args[11];
 
         final FS fs = new S3FS(accessKey, secretKey, endpoint);
-        final ConsistencyChecker checker = new ConsistencyChecker(fs, dir, num, size);
+        final MD5er md5er = new StandardMD5er();
+        final ConsistencyChecker checker = new ConsistencyChecker(fs, md5er, dir, num, size);
         checker.check();
     }
 }

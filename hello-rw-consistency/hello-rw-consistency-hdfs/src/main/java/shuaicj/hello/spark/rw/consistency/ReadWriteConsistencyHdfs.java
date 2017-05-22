@@ -1,5 +1,7 @@
 package shuaicj.hello.spark.rw.consistency;
 
+import shuaicj.hello.spark.rw.consistency.md5.StandardMD5er;
+
 /**
  * Verify r/w consistency on HDFS.
  *
@@ -19,7 +21,8 @@ public class ReadWriteConsistencyHdfs {
         final int size = Integer.parseInt(args[5]);
 
         final FS fs = new HDFS();
-        final ConsistencyChecker checker = new ConsistencyChecker(fs, dir, num, size);
+        final MD5er md5er = new StandardMD5er();
+        final ConsistencyChecker checker = new ConsistencyChecker(fs, md5er, dir, num, size);
         checker.check();
     }
 }

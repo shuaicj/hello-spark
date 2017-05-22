@@ -2,13 +2,8 @@ package shuaicj.hello.spark.rw.consistency;
 
 import org.apache.spark.api.java.JavaSparkContext;
 
-import javax.xml.bind.DatatypeConverter;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,14 +19,16 @@ import java.util.stream.Collectors;
 public class ConsistencyChecker implements Serializable {
 
     private final FS fs;
+    private final MD5er md5er;
     private final String dir;
     private final int num;
     private final int size;
 
     private volatile boolean stop;
 
-    public ConsistencyChecker(FS fs, String dir, int num, int size) {
+    public ConsistencyChecker(FS fs, MD5er md5er, String dir, int num, int size) {
         this.fs = fs;
+        this.md5er = md5er;
         this.dir = dir;
         this.num = num;
         this.size = size;
@@ -107,7 +104,7 @@ public class ConsistencyChecker implements Serializable {
         for (FileInfo info : infos) {
             try {
                 fs.write(info.getFile(), buf);
-                rt.add(new FileInfo(info.getFile(), info.getSize(), md5(info.getFile()), "ok"));
+                rt.add(new FileInfo(info.getFile(), info.getSize(), md5er.md5(info.getFile()), "ok"));
             } catch (IOException e) {
                 rt.add(new FileInfo(info.getFile(), info.getSize(), "no md5", e.toString()));
             }
@@ -127,7 +124,7 @@ public class ConsistencyChecker implements Serializable {
         r.nextBytes(buf);
         try {
             fs.write(info.getFile(), buf);
-            return new FileInfo(info.getFile(), info.getSize(), md5(info.getFile()), "ok");
+            return new FileInfo(info.getFile(), info.getSize(), md5er.md5(info.getFile()), "ok");
         } catch (IOException e) {
             return new FileInfo(info.getFile(), info.getSize(), "no md5", e.toString());
         }
@@ -139,7 +136,7 @@ public class ConsistencyChecker implements Serializable {
 
     private FileInfo read(FileInfo info) {
         try {
-            String actual = md5(info.getFile());
+            String actual = md5er.md5(info.getFile());
             return info.getMd5().equals(actual) ?
                     new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "ok") :
                     new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "actual:" + actual);
@@ -163,21 +160,6 @@ public class ConsistencyChecker implements Serializable {
     //         return e.toString();
     //     }
     // }
-
-    private String md5(String file) throws IOException {
-        // return DigestUtils.md5DigestAsHex(fs.read(file));
-        try (InputStream in = new FileInputStream(file)) {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] buf = new byte[4096];
-            for (int len = in.read(buf); len != -1; len = in.read(buf)) {
-                md.update(buf, 0, len);
-                Thread.sleep(100);
-            }
-            return DatatypeConverter.printHexBinary(md.digest()).toLowerCase();
-        } catch (InterruptedException | NoSuchAlgorithmException e) {
-            throw new IOException(e);
-        }
-    }
 
     // private String prettyMap(Map<String, Long> map) {
     //     StringBuilder sb = new StringBuilder();

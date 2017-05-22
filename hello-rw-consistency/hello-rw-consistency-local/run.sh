@@ -13,4 +13,5 @@ spark-submit \
     $DIR/hello-rw-consistency-local-1.0.0.jar \
     --dir /my/test/dir \
     --num 36 \
-    --size 10000000
+    --size 10000000 \
+    --md5er "md5cmd -cpp"
