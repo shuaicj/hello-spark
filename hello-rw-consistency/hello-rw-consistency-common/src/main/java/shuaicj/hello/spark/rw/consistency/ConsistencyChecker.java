@@ -114,7 +114,7 @@ public class ConsistencyChecker implements Serializable {
             return rt;
         }
         return rt.stream()
-                .map(info -> new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "not same"))
+                .map(info -> new FileInfo(info.getFile(), info.getSize(), info.getMd5(), "inconsistent:" + info.getStatus()))
                 .collect(Collectors.toList());
     }
 
