@@ -1,9 +1,9 @@
 package shuaicj.hello.spark.rw.consistency.md5;
 
 import org.springframework.util.DigestUtils;
+import shuaicj.hello.spark.rw.consistency.FS;
 import shuaicj.hello.spark.rw.consistency.MD5er;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
@@ -14,8 +14,14 @@ import java.io.IOException;
 @SuppressWarnings("serial")
 public class StandardMD5er implements MD5er {
 
+    private final FS fs;
+
+    public StandardMD5er(FS fs) {
+        this.fs = fs;
+    }
+
     @Override
     public String md5(String file) throws IOException {
-        return DigestUtils.md5DigestAsHex(new FileInputStream(file));
+        return DigestUtils.md5DigestAsHex(fs.read(file));
     }
 }

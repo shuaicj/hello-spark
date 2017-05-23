@@ -53,7 +53,7 @@ int md5_cpp(const char* file) {
         MD5_Init(&ctx);
         char buf[BUF_LEN] = {0};
         int num = 0;
-        while (!f.eof()) {
+        while (!f.eof() && f.good()) {
             f.read(buf, BUF_LEN);
             MD5_Update(&ctx, buf, f.gcount());
         }

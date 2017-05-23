@@ -28,7 +28,7 @@ public class ReadWriteConsistencyS3 {
         final String endpoint = args[11];
 
         final FS fs = new S3FS(accessKey, secretKey, endpoint);
-        final MD5er md5er = new StandardMD5er();
+        final MD5er md5er = new StandardMD5er(fs);
         final ConsistencyChecker checker = new ConsistencyChecker(fs, md5er, dir, num, size);
         checker.check();
     }

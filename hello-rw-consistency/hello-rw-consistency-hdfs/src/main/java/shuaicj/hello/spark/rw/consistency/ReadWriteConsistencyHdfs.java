@@ -21,7 +21,7 @@ public class ReadWriteConsistencyHdfs {
         final int size = Integer.parseInt(args[5]);
 
         final FS fs = new HDFS();
-        final MD5er md5er = new StandardMD5er();
+        final MD5er md5er = new StandardMD5er(fs);
         final ConsistencyChecker checker = new ConsistencyChecker(fs, md5er, dir, num, size);
         checker.check();
     }

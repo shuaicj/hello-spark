@@ -30,6 +30,7 @@ public class HDFS implements FS {
         Path p = new Path(path);
         try (OutputStream out = new BufferedOutputStream(p.getFileSystem(new Configuration()).create(p))) {
             out.write(bytes);
+            out.flush();
         }
     }
 

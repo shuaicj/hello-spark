@@ -1,6 +1,7 @@
 package shuaicj.hello.spark.rw.consistency;
 
 import shuaicj.hello.spark.rw.consistency.md5.ExternalMD5er;
+import shuaicj.hello.spark.rw.consistency.md5.SequenceMD5er;
 import shuaicj.hello.spark.rw.consistency.md5.SlowMD5er;
 import shuaicj.hello.spark.rw.consistency.md5.StandardMD5er;
 
@@ -24,18 +25,18 @@ public class ReadWriteConsistencyLocal {
         final int num = Integer.parseInt(args[3]);
         final int size = Integer.parseInt(args[5]);
 
+        final FS fs = new LocalFS();
         MD5er md5er;
         if (args.length == 6) {
-            md5er = new StandardMD5er();
+            md5er = new StandardMD5er(fs);
         } else if (args.length == 8 && args[6].equals("--md5er") && args[7].equals("slow")) {
             md5er = new SlowMD5er();
         } else if (args.length == 8 && args[6].equals("--md5er")) {
-            md5er = new ExternalMD5er(args[7]);
+            md5er = new SequenceMD5er(new StandardMD5er(fs), new ExternalMD5er(args[7]), new StandardMD5er(fs));
         } else {
             throw new IllegalArgumentException("invalid md5er");
         }
 
-        final FS fs = new LocalFS();
         final ConsistencyChecker checker = new ConsistencyChecker(fs, md5er, dir, num, size);
         checker.check();
     }
