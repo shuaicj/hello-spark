@@ -1,5 +1,7 @@
 # hello-spark
-Hello Spark!
+
+Examples for learning Apache Spark.
+
 - **hello-word-count** - word count via `Spark MapReduce`
 - **hello-word-count-network** - word count via `Spark Stream`
 - **hello-parallelize** - usage of `SparkContext.parallelize()`
