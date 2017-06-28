@@ -2,10 +2,11 @@ package shuaicj.hello.spark.rw.consistency.utils;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
@@ -76,15 +77,21 @@ public class Utils {
         }
 
         public static S3 conn(String accessKey, String secretKey, String endpoint) {
-            AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+            return new S3(AmazonS3ClientBuilder.standard()
+                    .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)))
+                    .withClientConfiguration(new ClientConfiguration().withProtocol(Protocol.HTTP))
+                    .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, "us-east-1"))
+                    .build());
 
-            ClientConfiguration clientConfig = new ClientConfiguration();
-            clientConfig.setProtocol(Protocol.HTTP);
-
-            AmazonS3 conn = new AmazonS3Client(credentials, clientConfig);
-            conn.setEndpoint(endpoint);
-
-            return new S3(conn);
+            // AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+            //
+            // ClientConfiguration clientConfig = new ClientConfiguration();
+            // clientConfig.setProtocol(Protocol.HTTP);
+            //
+            // AmazonS3 conn = new AmazonS3Client(credentials, clientConfig);
+            // conn.setEndpoint(endpoint);
+            //
+            // return new S3(conn);
         }
 
         public void createBucket(String bucket) {

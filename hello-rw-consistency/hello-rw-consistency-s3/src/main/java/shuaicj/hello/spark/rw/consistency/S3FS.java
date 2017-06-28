@@ -2,10 +2,11 @@ package shuaicj.hello.spark.rw.consistency;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import lombok.Getter;
@@ -29,11 +30,21 @@ public class S3FS implements FS {
     private final String accessKey;
     private final String secretKey;
     private final String endpoint;
+    private final String region;
+
+    public S3FS(String accessKey, String secretKey) {
+        this(accessKey, secretKey, null, null);
+    }
 
     public S3FS(String accessKey, String secretKey, String endpoint) {
+        this(accessKey, secretKey, endpoint, null);
+    }
+
+    public S3FS(String accessKey, String secretKey, String endpoint, String region) {
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.endpoint = endpoint;
+        this.region = region;
     }
 
     @Override
@@ -99,15 +110,25 @@ public class S3FS implements FS {
     }
 
     private AmazonS3 conn() {
-        AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+        AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)))
+                .withClientConfiguration(new ClientConfiguration().withProtocol(Protocol.HTTP));
 
-        ClientConfiguration clientConfig = new ClientConfiguration();
-        clientConfig.setProtocol(Protocol.HTTP);
+        if (endpoint != null) {
+            return builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                    endpoint, region == null ? "us-east-1" : region)).build();
+        }
+        return builder.build();
 
-        AmazonS3 conn = new AmazonS3Client(credentials, clientConfig);
-        conn.setEndpoint(endpoint);
-
-        return conn;
+        // AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+        //
+        // ClientConfiguration clientConfig = new ClientConfiguration();
+        // clientConfig.setProtocol(Protocol.HTTP);
+        //
+        // AmazonS3 conn = new AmazonS3Client(credentials, clientConfig);
+        // conn.setEndpoint(endpoint);
+        //
+        // return conn;
     }
 
     private boolean createBucket(AmazonS3 conn, String bucket) {
