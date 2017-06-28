@@ -16,4 +16,5 @@ spark-submit \
     --size 10000000 \
     --access-key YOUR_ACCESS_KEY \
     --secret-key YOUR_SECRET_KEY \
-    --endpoint YOUR_ENDPOINT
+    --endpoint YOUR_ENDPOINT \
+    --region YOUR_REGION
