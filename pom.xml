@@ -15,6 +15,7 @@
         <module>hello-parallelize</module>
         <module>hello-multi-thread</module>
         <module>hello-rw-consistency</module>
+        <module>hello-slave-ip</module>
     </modules>
 
     <properties>

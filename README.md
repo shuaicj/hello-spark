@@ -12,3 +12,4 @@ Examples for learning Apache Spark.
     - **hello-rw-concistency-hdfs** - test `Apache HDFS`
     - **hello-rw-concistency-s3** - test any file system which is compatible with `S3 API`, like `AWS` or `Ceph`
     - **hello-rw-concistency-utils** - useful helper
+- **hello-slave-ip** - get the IPs of all spark slaves
